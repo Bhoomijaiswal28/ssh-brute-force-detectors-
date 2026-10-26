@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSH Brute-Force Detector | Bhoomi Jaiswal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#000000; --panel:#0e0e0e; --panel-light:#161616;
+      --text:#ffffff; --text-soft:#d6d6d6; --muted:#9a9a9a;
+      --accent:#ff7a2a; --accent-ink:#ff9a55; --ink:#000000;
+      --border:#2e2e2e; --track:#262626;
+      --crit:#ff5a5a; --high:#ffb347; --ok:#6fe3a1;
+      --display:"Bricolage Grotesque","Trebuchet MS",Arial,sans-serif;
+      --body:"DM Sans",Arial,sans-serif;
+      --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.5}
+    .wrap{max-width:1000px;margin:0 auto;padding:24px 16px 60px}
+    a.back{font-family:var(--mono);font-size:13px;color:var(--accent-ink);text-decoration:none}
+    h1{font-family:var(--display);font-weight:800;font-size:clamp(2rem,6vw,3.2rem);line-height:1.05;margin:18px 0 8px}
+    h1 span{color:var(--accent)}
+    .lead{color:var(--text-soft);max-width:60ch;margin:0 0 24px}
+    .panel{background:var(--panel);border:1px solid var(--border);padding:18px;margin-bottom:20px}
+    label{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px}
+    textarea{width:100%;min-height:170px;background:var(--ink);color:var(--text);border:1px solid var(--border);
+      font-family:var(--mono);font-size:12px;padding:10px;resize:vertical}
+    .row{display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin-top:14px}
+    input[type=number]{width:110px;background:var(--ink);color:var(--text);border:1px solid var(--border);
+      padding:9px;font-family:var(--mono);font-size:14px}
+    button,.btn{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.04em;cursor:pointer;
+      padding:11px 18px;border:1px solid var(--accent);background:transparent;color:var(--text)}
+    button.primary{background:var(--accent);color:var(--ink)}
+    button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #fff;outline-offset:2px}
+    input[type=file]{color:var(--text-soft);font-family:var(--mono);font-size:12px;max-width:100%}
+    .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+    .tile{background:var(--panel);border:1px solid var(--border);padding:14px 16px}
+    .tile b{display:block;font-family:var(--display);font-size:2rem}
+    .tile small{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em}
+    h2{font-family:var(--display);font-size:1.4rem;margin:0 0 12px}
+    .alert{border-left:6px solid var(--high);background:var(--ink);padding:12px 14px;margin-bottom:12px}
+    .alert.CRITICAL{border-color:var(--crit)}
+    .alert h3{margin:0 0 6px;font-size:1rem;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .badge{font-family:var(--mono);font-size:11px;padding:2px 8px;background:var(--high);color:var(--ink);font-weight:700}
+    .CRITICAL .badge{background:var(--crit)}
+    .alert p{margin:2px 0;font-size:14px;color:var(--text-soft);font-family:var(--mono)}
+    .alert p.warn{color:var(--crit);font-weight:600}
+    .bars .bar{display:grid;grid-template-columns:130px 1fr 40px;gap:10px;align-items:center;margin:7px 0;
+      font-family:var(--mono);font-size:12px}
+    .track{background:var(--track);height:14px}
+    .fill{height:100%;background:var(--accent-ink)}
+    .fill.alerted{background:var(--crit)}
+    .empty{color:var(--muted);font-family:var(--mono);font-size:13px}
+    .note{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:24px}
+    @media (max-width:560px){.bars .bar{grid-template-columns:100px 1fr 32px}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  
+  <h1>SSH BRUTE-FORCE <span>DETECTOR.</span></h1>
+  <p class="lead">Paste ya upload karein ek SSH <code>auth.log</code>. Tool dekhega ki kaun sa IP bahut tezi se galat password daal raha hai, aur ye bhi ki attack ke baad login ho gaya ya nahi. Sab kuch aapke browser mein chalta hai, koi data kahin upload nahi hota.</p>
+
+  <section class="panel">
+    <label for="log">LOG DATA</label>
+    <textarea id="log" placeholder="Oct 26 10:10:12 ubuntu sshd[1234]: Failed password for root from 203.0.113.45 port 52144 ssh2"></textarea>
+    <div class="row">
+      <div><label for="file">UPLOAD FILE</label><input type="file" id="file" accept=".log,.txt"></div>
+      <button id="sample" type="button">LOAD SAMPLE LOG</button>
+    </div>
+    <div class="row">
+      <div><label for="thr">FAILS (THRESHOLD)</label><input type="number" id="thr" value="5" min="2"></div>
+      <div><label for="win">WITHIN SECONDS</label><input type="number" id="win" value="60" min="5"></div>
+      <div><label for="yr">YEAR</label><input type="number" id="yr" value="2026"></div>
+      <button class="primary" id="run" type="button">ANALYZE ↘</button>
+    </div>
+  </section>
+
+  <div id="results" hidden>
+    <div class="tiles" id="tiles"></div>
+    <section class="panel"><h2>Alerts</h2><div id="alerts"></div>
+      <div class="row"><button id="csv" type="button">DOWNLOAD report.csv ↓</button></div></section>
+    <section class="panel"><h2>Failed logins per IP</h2><div class="bars" id="bars"></div></section>
+  </div>
+
+  <p class="note">Sirf apni khud ki lab ya apne logs pe use karein. Built by Bhoomi Jaiswal.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+const FAILED = /^(\w{3})\s+(\d+)\s(\d\d):(\d\d):(\d\d) .*Failed password for (?:invalid user )?(\S+) from ([\d.]+)/;
+const ACCEPTED = /^(\w{3})\s+(\d+)\s(\d\d):(\d\d):(\d\d) .*Accepted password for (\S+) from ([\d.]+)/;
+let lastAlerts = [];
+
+function toTime(m, year){ return new Date(year, MONTHS[m[1]], +m[2], +m[3], +m[4], +m[5]).getTime(); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(ms){ const d = new Date(ms), p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }
+
+function analyze(text, thr, win, year){
+  const fails = {}, users = {}, successes = [];
+  let parsed = 0;
+  for (const line of text.split(/\r?\n/)){
+    let m = line.match(FAILED);
+    if (m){ parsed++; const ip = m[7]; (fails[ip] ||= []).push(toTime(m, year)); (users[ip] ||= new Set()).add(m[6]); continue; }
+    m = line.match(ACCEPTED);
+    if (m){ parsed++; successes.push({t: toTime(m, year), ip: m[7]}); }
+  }
+  const alerts = [], quiet = [];
+  for (const ip in fails){
+    const times = fails[ip].sort((a,b) => a-b);
+    let s = 0, best = 0, first = null;
+    times.forEach((t, e) => {
+      while ((t - times[s]) / 1000 > win) s++;
+      const c = e - s + 1;
+      if (c > best) best = c;
+      if (c >= thr && first === null) first = t;
+    });
+    if (first !== null){
+      const breached = successes.some(x => x.ip === ip && x.t >= first);
+      alerts.push({ip, severity: breached ? "CRITICAL" : "HIGH", failed_total: times.length, max_in_window: best,
+        users_tried: [...users[ip]].sort().join(" | "), first_alert_time: fmt(first), login_after_attack: breached ? "YES" : "no"});
+    } else quiet.push({ip, n: times.length});
+  }
+  alerts.sort((a,b) => b.max_in_window - a.max_in_window);
+  return {alerts, quiet, fails, parsed, totalFailed: Object.values(fails).reduce((a,b) => a + b.length, 0)};
+}
+
+function render(r, win, thr){
+  $("results").hidden = false;
+  lastAlerts = r.alerts;
+  const crit = r.alerts.filter(a => a.severity === "CRITICAL").length;
+  $("tiles").innerHTML =
+    `<div class="tile"><b>${r.totalFailed}</b><small>FAILED LOGINS</small></div>
+     <div class="tile"><b>${r.alerts.length}</b><small>ATTACKING IPS</small></div>
+     <div class="tile"><b style="color:${crit ? 'var(--crit)' : 'var(--ok)'}">${crit}</b><small>CRITICAL</small></div>`;
+  $("alerts").innerHTML = r.alerts.length ? r.alerts.map(a =>
+    `<div class="alert ${a.severity}">
+       <h3><span class="badge">${a.severity}</span> Brute-force from ${esc(a.ip)}</h3>
+       <p>failed attempts: ${a.failed_total} (max ${a.max_in_window} in ${win}s)</p>
+       <p>usernames tried: ${esc(a.users_tried)}</p>
+       <p>first alert at: ${a.first_alert_time}</p>
+       ${a.login_after_attack === "YES" ? '<p class="warn">!! LOGIN SUCCEEDED after the attack — account compromise ho sakta hai</p>' : ''}
+     </div>`).join("") : '<p class="empty">Koi brute-force attack nahi mila.</p>';
+  $("csv").style.display = r.alerts.length ? "" : "none";
+  const alerted = new Set(r.alerts.map(a => a.ip));
+  const rows = Object.entries(r.fails).map(([ip, t]) => [ip, t.length]).sort((a,b) => b[1] - a[1]);
+  const max = rows.length ? rows[0][1] : 1;
+  $("bars").innerHTML = rows.length ? rows.map(([ip, n]) =>
+    `<div class="bar"><span>${esc(ip)}</span><div class="track"><div class="fill ${alerted.has(ip) ? 'alerted' : ''}" style="width:${n / max * 100}%"></div></div><span>${n}</span></div>`).join("")
+    : '<p class="empty">Koi failed login nahi mila.</p>';
+}
+
+function run(){
+  const text = $("log").value;
+  const thr = +$("thr").value || 5, win = +$("win").value || 60, year = +$("yr").value || new Date().getFullYear();
+  const r = analyze(text, thr, win, year);
+  if (!r.parsed){ alert("Koi SSH login line nahi mili. 'Failed password for ...' wali lines paste karein ya Load Sample dabayein."); return; }
+  render(r, win, thr);
+  $("results").scrollIntoView({behavior: "smooth"});
+}
+
+function sampleLog(){
+  const L = [], p = n => String(n).padStart(2, "0");
+  const t = (h, m, s) => `Oct 26 ${p(h)}:${p(m)}:${p(s)}`;
+  const add = (h, m, s, msg) => L.push(`${t(h, m, s)} ubuntu sshd[${1000 + L.length * 7}]: ${msg}`);
+  // normal users
+  [[9,8,"bhoomi","192.168.56.1"],[9,40,"student","10.0.0.15"],[10,2,"admin_lab","192.168.56.20"],[11,30,"bhoomi","192.168.56.1"]]
+    .forEach(([h, m, u, ip]) => add(h, m, 0, `Accepted password for ${u} from ${ip} port 4${h}${m} ssh2`));
+  add(9, 41, 3, "Failed password for student from 10.0.0.15 port 41234 ssh2");
+  // attacker 1: brute force
+  const names = ["root", "admin", "labuser", "test"];
+  for (let i = 0; i < 18; i++){
+    const u = names[i % 4], inv = u !== "labuser" ? "invalid user " : "";
+    add(10, 10, 12 + i * 2, `Failed password for ${inv}${u} from 203.0.113.45 port ${50000 + i * 13} ssh2`);
+  }
+  // attacker 2: brute force + successful login
+  for (let i = 0; i < 7; i++) add(11, 5, 18 + i * 4, `Failed password for labuser from 198.51.100.77 port ${40000 + i * 31} ssh2`);
+  add(11, 5, 50, "Accepted password for labuser from 198.51.100.77 port 40999 ssh2");
+  // slow guesser (should NOT alert)
+  [[12,5],[12,22],[12,41],[13,2]].forEach(([h, m]) => add(h, m, 0, "Failed password for student from 192.0.2.9 port 45000 ssh2"));
+  return L.sort().join("\n");
+}
+
+$("run").addEventListener("click", run);
+$("sample").addEventListener("click", () => { $("log").value = sampleLog(); run(); });
+$("file").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader(); rd.onload = () => { $("log").value = rd.result; run(); }; rd.readAsText(f);
+});
+$("csv").addEventListener("click", () => {
+  const h = ["ip","severity","failed_total","max_in_window","users_tried","first_alert_time","login_after_attack"];
+  const csv = [h.join(",")].concat(lastAlerts.map(a => h.map(k => `"${String(a[k]).replace(/"/g,'""')}"`).join(","))).join("\n");
+  const url = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
+  const a = document.createElement("a"); a.href = url; a.download = "report.csv"; a.click(); URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
